@@ -8,7 +8,9 @@ mà không phải sửa một dòng code nào.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,6 +48,23 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 10
     monthly_budget_usd: float = 10.0
     log_level: str = "INFO"
+    llm_provider: Literal["mock", "openai"] = "mock"
+    openai_api_key: SecretStr | None = None
+    openai_model: str = "gpt-5-mini"
+    openai_input_price_per_1m: float = 0.25
+    openai_output_price_per_1m: float = 2.0
+
+    @model_validator(mode="after")
+    def validate_openai_config(self) -> "Settings":
+        """Chỉ bắt buộc OpenAI key khi chủ động bật provider thật."""
+        key = self.openai_api_key
+        if self.llm_provider == "openai" and (
+            key is None or not key.get_secret_value().strip()
+        ):
+            raise ValueError(
+                "OPENAI_API_KEY is required when LLM_PROVIDER=openai"
+            )
+        return self
 
 
 @lru_cache(maxsize=1)

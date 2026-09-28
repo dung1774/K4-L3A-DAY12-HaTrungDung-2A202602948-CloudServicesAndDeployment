@@ -5,6 +5,7 @@ pydantic>=2.6
 pydantic-settings>=2.2
 redis>=5.0
 python-dotenv>=1.0
+openai>=1.66.0
 
 # Test & checkpoint
 pytest>=8.0

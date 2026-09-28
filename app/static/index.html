@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Day 12 AI Chat Demo</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="chat-shell">
+      <header>
+        <p class="eyebrow">FastAPI · Railway demo</p>
+        <h1>Day 12 AI Chat Demo</h1>
+        <p class="subtitle">Chat với service qua pipeline bảo mật và Redis hiện có.</p>
+      </header>
+
+      <section class="credentials" aria-label="Thông tin truy cập">
+        <label>
+          User ID
+          <input id="user-id" type="text" value="demo-user" autocomplete="username">
+        </label>
+        <label>
+          Access Key
+          <input id="access-key" type="password" placeholder="AGENT_API_KEY" autocomplete="current-password">
+        </label>
+      </section>
+
+      <section id="conversation" class="conversation" aria-live="polite">
+        <p class="welcome">Nhập Access Key của service và gửi câu hỏi đầu tiên.</p>
+      </section>
+
+      <p id="status" class="status" role="status"></p>
+
+      <form id="chat-form" class="composer">
+        <label class="sr-only" for="question">Câu hỏi</label>
+        <textarea id="question" rows="3" maxlength="2000" placeholder="Nhập câu hỏi…" required></textarea>
+        <button id="send-button" type="submit">Send</button>
+      </form>
+      <p class="hint">Enter để gửi · Shift+Enter để xuống dòng</p>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

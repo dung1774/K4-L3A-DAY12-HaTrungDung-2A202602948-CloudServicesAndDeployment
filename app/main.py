@@ -15,23 +15,25 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from functools import lru_cache
+from pathlib import Path
 
-from fastapi import Depends, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-
-from utils.mock_llm import ask_llm
 
 from .auth import verify_api_key
 from .config import get_settings
 from .cost_guard import CostGuard
 from .lifecycle import lifecycle
+from .llm_provider import LLMProvider, LLMProviderError, get_llm_provider
 from .logging_utils import log_event
 from .rate_limiter import RateLimiter
 from .store import ConversationStore, get_redis_client
 
 SERVICE_NAME = "day12-agent"
 SERVICE_VERSION = "1.0.0"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -57,6 +59,8 @@ def get_cost_guard() -> CostGuard:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """CHO SẴN — chạy lúc app khởi động và lúc tắt."""
+    # Fail fast với cấu hình OpenAI thiếu key trước khi nhận traffic.
+    get_llm_provider()
     lifecycle.install()
     log_event("service_started", service=SERVICE_NAME, version=SERVICE_VERSION)
     yield
@@ -64,6 +68,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Day 12 Production Agent", version=SERVICE_VERSION, lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class AskRequest(BaseModel):
@@ -73,6 +78,11 @@ class AskRequest(BaseModel):
 # ─────────────────────────────────────────────────────────────
 # Health & readiness
 # ─────────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+def chat_ui():
+    return FileResponse(STATIC_DIR / "index.html")
+
+
 @app.get("/health")
 def health():
     if lifecycle.shutting_down:
@@ -121,6 +131,7 @@ def ask(
     store: ConversationStore = Depends(get_store),
     limiter: RateLimiter = Depends(get_rate_limiter),
     guard: CostGuard = Depends(get_cost_guard),
+    provider: LLMProvider = Depends(get_llm_provider),
 ):
     limiter.check(user_id)
 
@@ -128,10 +139,13 @@ def ask(
 
     history = store.get_history(user_id)
 
-    result = ask_llm(
-        payload.question,
-        history,
-    )
+    try:
+        result = provider.ask(payload.question, history)
+    except LLMProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from None
 
     store.append(
         user_id,

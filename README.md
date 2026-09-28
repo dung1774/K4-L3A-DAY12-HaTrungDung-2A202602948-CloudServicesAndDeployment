@@ -286,3 +286,40 @@ Nộp **link repository** lên Codelab. Repo phải ở chế độ public.
 - [ ] Không còn `NotImplementedError` nào trong `app/`
 - [ ] Có commit ở nhiều mốc thời gian, không phải một commit duy nhất
 - [ ] *(Bonus)* `.github/workflows/ci.yml` chạy xanh, README có badge `passing`
+
+---
+
+## Optional OpenAI Web Demo
+
+Đây là phần mở rộng ngoài yêu cầu bài lab. Mặc định service vẫn dùng mock LLM
+để chạy offline và để test không gọi API thật. Cài dependency và chạy ở chế độ
+mock trên Windows PowerShell:
+
+```powershell
+pip install -r requirements.txt
+$env:AGENT_API_KEY="your-service-access-key"
+$env:REDIS_URL="redis://localhost:6379/0"
+$env:LLM_PROVIDER="mock"
+uvicorn app.main:app --reload --port 8000
+```
+
+Để dùng OpenAI Responses API, đặt thêm các biến server-side sau:
+
+```powershell
+$env:LLM_PROVIDER="openai"
+$env:OPENAI_API_KEY="your-openai-secret"
+$env:OPENAI_MODEL="gpt-5-mini"
+uvicorn app.main:app --reload --port 8000
+```
+
+Mở `http://localhost:8000/`, nhập `AGENT_API_KEY` của service vào ô Access
+Key rồi chat. Ô này không phải OpenAI key; `OPENAI_API_KEY` chỉ tồn tại ở
+backend và tuyệt đối không được commit vào Git.
+
+Khi deploy Railway, giữ `AGENT_API_KEY`, `REDIS_URL`,
+`RATE_LIMIT_PER_MINUTE`, `MONTHLY_BUDGET_USD`, `LOG_LEVEL` và thêm
+`LLM_PROVIDER=openai`, `OPENAI_API_KEY` (Railway secret),
+`OPENAI_MODEL=gpt-5-mini`. Có thể cấu hình
+`OPENAI_INPUT_PRICE_PER_1M` và `OPENAI_OUTPUT_PRICE_PER_1M` để ước tính chi
+phí; giá thay đổi theo model/pricing hiện tại. Sau khi deploy, mở public URL
+Railway trên trình duyệt của máy khác để dùng UI.
